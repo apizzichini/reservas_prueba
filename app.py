@@ -41,3 +41,4 @@ with st.form("registro_reserva"):
                     st.error(f"Error del servidor: {response.status_code}")
             except Exception as e:
                 st.error(f"No se pudo conectar con el sistema: {e}")
+app = None
