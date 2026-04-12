@@ -49,3 +49,10 @@ def handler(event, context):
     }
 
 app = handler
+# --- Al final de tu código de app.py ---
+
+# Vercel necesita encontrar un objeto llamado 'app' o 'handler'
+def handler(request):
+    return "App is running"
+
+app = handler
