@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template_string, request, Response
 import requests
-from fpdf import FPDF
+from fpdf import FPDF  # <--- Asegúrate de que esta línea esté presente
 
 app = Flask(__name__)
 URL_API = os.getenv("APPS_SCRIPT_URL")
