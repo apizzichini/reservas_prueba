@@ -24,81 +24,113 @@ def generar_comprobante(datos):
     pdf.ln(10)
     pdf.set_font("Arial", "B", 12)
     pdf.set_text_color(220, 53, 69)
-    pdf.cell(0, 10, f"CODIGO UNICO DE RESERVA: {datos.get('uuid')}", ln=True)
+    pdf.cell(0, 10, f"CODIGO: {datos.get('uuid')}", ln=True)
     return pdf.output()
 
-# --- PLANTILLA HTML ÚNICA (Para evitar el error de duplicado) ---
-def render_pagina(contenido, res=None, clase="", datos=None):
-    html = f'''
-    <!DOCTYPE html>
-    <html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+# --- HTML MAESTRO (Sin bloques conflictivos) ---
+HTML_TEMPLATE = '''
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
-    <title>Inscripciones Informática</title></head><body>
-    <nav class="navbar is-dark"><div class="container"><div class="navbar-brand">
-    <a class="navbar-item" href="/"><b>REGISTRO</b></a><a class="navbar-item" href="/estado"><b>MI ESTADO</b></a>
-    </div></div></nav>
-    <section class="section"><div class="container" style="max-width: 500px;">
-        {contenido}
-    </div></section>
-    </body></html>
-    '''
-    return render_template_string(html, res=res, clase=clase, datos=datos)
+    <title>Inscripciones UNTREF</title>
+</head>
+<body>
+    <nav class="navbar is-dark">
+        <div class="container">
+            <div class="navbar-brand">
+                <a class="navbar-item" href="/"><b>REGISTRO</b></a>
+                <a class="navbar-item" href="/estado"><b>MI ESTADO</b></a>
+            </div>
+        </div>
+    </nav>
+    <section class="section">
+        <div class="container" style="max-width: 500px;">
+            <div class="box">
+                {{ contenido_principal | safe }}
+            </div>
+        </div>
+    </section>
+</body>
+</html>
+'''
 
 @app.route('/', methods=['GET', 'POST'])
 def registro():
-    res, clase = None, ""
+    mensaje_html = ""
     if request.method == 'POST':
-        payload = {{"accion": "registrar", "nombre": request.form.get('nombre'), "dni": request.form.get('dni'), 
-                   "materia": request.form.get('materia'), "fecha": request.form.get('fecha')}}
+        payload = {
+            "accion": "registrar",
+            "nombre": request.form.get('nombre'),
+            "dni": request.form.get('dni'),
+            "materia": request.form.get('materia'),
+            "fecha": request.form.get('fecha')
+        }
         try:
             r = requests.post(URL_API, json=payload, timeout=15).json()
             if r['status'] == 'success':
-                res, clase = "✅ Inscripción realizada con éxito.", "is-success"
+                mensaje_html = '<div class="notification is-success mt-4">✅ Inscripción realizada con éxito.</div>'
             elif r['status'] == 'exists':
-                res, clase = f"⚠️ Ya estás inscripto en {{ r['data']['materia'] }}.", "is-warning"
+                mensaje_html = f'<div class="notification is-warning mt-4">⚠️ Ya estás inscripto en {r["data"]["materia"]}.</div>'
             else:
-                res, clase = f"🚫 {{ r['data'] }}", "is-danger"
+                mensaje_html = f'<div class="notification is-danger mt-4">🚫 {r["data"]}</div>'
         except:
-            res, clase = "❌ Error de conexión.", "is-danger"
+            mensaje_html = '<div class="notification is-danger mt-4">❌ Error de conexión con la base de datos.</div>'
     
-    contenido = '''
-    <div class="box"><h1 class="title is-4">Inscripción</h1>
-    <form method="POST"><label class="label">Nombre</label><input class="input mb-2" name="nombre" required>
-    <label class="label">DNI</label><input class="input mb-2" name="dni" type="number" required>
-    <label class="label">Materia</label><div class="select is-fullwidth mb-2"><select name="materia">
-    <option>Informática I</option><option>Informática II</option><option>Informática III</option></select></div>
-    <label class="label">Fecha</label><input class="input mb-4" name="fecha" type="date" required>
-    <button class="button is-link is-fullwidth">Inscribirse</button></form>
-    {% if res %}<div class="notification {{clase}} mt-4">{{res}}</div>{% endif %}</div>
+    form_html = f'''
+    <h1 class="title is-4">Inscripción</h1>
+    <form method="POST">
+        <label class="label">Nombre Completo</label>
+        <input class="input mb-2" name="nombre" required>
+        <label class="label">DNI</label>
+        <input class="input mb-2" name="dni" type="number" required>
+        <label class="label">Materia</label>
+        <div class="select is-fullwidth mb-2">
+            <select name="materia">
+                <option>Informática I</option>
+                <option>Informática II</option>
+                <option>Informática III</option>
+            </select>
+        </div>
+        <label class="label">Fecha</label>
+        <input class="input mb-4" name="fecha" type="date" required>
+        <button class="button is-link is-fullwidth">Inscribirse</button>
+    </form>
+    {mensaje_html}
     '''
-    return render_pagina(contenido, res, clase)
+    return render_template_string(HTML_TEMPLATE, contenido_principal=form_html)
 
 @app.route('/estado', methods=['GET', 'POST'])
 def estado():
-    info, datos, clase = None, None, ""
+    contenido_html = '<h1 class="title is-4">Consultar Estado</h1>'
     if request.method == 'POST':
         payload = {"accion": "consultar", "dni": request.form.get('dni')}
         try:
             r = requests.post(URL_API, json=payload).json()
             if r['status'] == 'exists':
-                datos = r['data']
-                info = f"Hola {datos['nombre']}, estás inscripto en {datos['materia']}."
-                clase = "is-info"
+                d = r['data']
+                contenido_html += f'''
+                <div class="notification is-info mt-4">
+                    Hola {d['nombre']}, estás inscripto en {d['materia']}.
+                    <hr>
+                    <a href="/descargar_pdf?nombre={d['nombre']}&dni={d['dni']}&materia={d['materia']}&estado={d['estado']}&uuid={d['uuid']}" 
+                    class="button is-dark is-fullwidth">Descargar Comprobante PDF</a>
+                </div>'''
             else:
-                info = "No se encontró registro para este DNI."
-                clase = "is-danger"
+                contenido_html += '<div class="notification is-danger mt-4">No se encontró registro para este DNI.</div>'
         except:
-            info, clase = "Error de conexión.", "is-danger"
-            
-    contenido = '''
-    <div class="box"><h1 class="title is-4">Consultar Estado</h1>
-    <form method="POST"><label class="label">DNI</label><input class="input mb-4" name="dni" placeholder="Ingresa tu DNI" required>
-    <button class="button is-primary is-fullwidth">Buscar</button></form>
-    {% if res %}<div class="notification {{clase}} mt-4">{{res}}
-    {% if datos %}<hr><a href="/descargar_pdf?nombre={{datos.nombre}}&dni={{datos.dni}}&materia={{datos.materia}}&estado={{datos.estado}}&uuid={{datos.uuid}}" 
-    class="button is-dark is-fullwidth">Descargar Comprobante PDF</a>{% endif %}</div>{% endif %}</div>
-    '''
-    return render_pagina(contenido, info, clase, datos)
+            contenido_html += '<div class="notification is-danger mt-4">Error de conexión.</div>'
+    
+    contenido_html += '''
+    <form method="POST">
+        <label class="label">DNI</label>
+        <input class="input mb-4" name="dni" placeholder="Ingresa tu DNI" required>
+        <button class="button is-primary is-fullwidth">Buscar</button>
+    </form>'''
+    
+    return render_template_string(HTML_TEMPLATE, contenido_principal=contenido_html)
 
 @app.route('/descargar_pdf')
 def descargar_pdf():
