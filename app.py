@@ -4,7 +4,7 @@ import requests
 from fpdf import FPDF
 
 app = Flask(__name__)
-app.secret_key = "untref_innovar_full_2026"
+app.secret_key = "untref_innovar_final_v2"
 URL_API = os.getenv("APPS_SCRIPT_URL")
 
 # --- LÓGICA DE PDF ---
@@ -29,13 +29,14 @@ def generar_comprobante(datos):
 
 # --- TEMARIOS ROCKET ---
 TEMAS_ROCKET = {
-    "Excel Avanzado (Fórmulas y Macros)": "gestión de datos complejos, BUSCARV, SI anidados y automatización con Macros.",
-    "Word Académico (Normas y Estructura)": "producción de documentos extensos, saltos de sección, normas APA e índices automáticos.",
-    "Python e Innovación (Ciencia de Datos)": "pensamiento computacional, librerías Pandas y lógica de programación.",
-    "IA y Vibe Coding (Prompt Engineering)": "integración de modelos generativos y desarrollo asistido por IA."
+    "Excel Avanzado": "gestión de datos complejos, BUSCARV, SI anidados y automatización con Macros.",
+    "Word Académico": "producción de documentos extensos, saltos de sección, normas APA e índices automáticos.",
+    "Python e Innovación": "pensamiento computacional, librerías Pandas y lógica de programación.",
+    "IA y Vibe Coding": "integración de modelos generativos y desarrollo asistido por IA."
 }
 
 # --- HTML MAESTRO ---
+# Se utiliza url_for('static', filename='nombre_archivo') para cargar las imágenes locales
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="es">
@@ -45,13 +46,18 @@ HTML_TEMPLATE = '''
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <title>Innovar UNTREF</title>
     <style>
-        .rocket-box { background: #1a1a1a; color: #00ff41; padding: 20px; border-radius: 10px; font-family: monospace; border: 1px solid #00ff41; }
-        .ai-button { margin: 5px; }
-        .box { border-radius: 12px; }
+        :root { --untref-blue: #1d438a; --untref-dark: #1a1a1a; }
+        .navbar { background-color: var(--untref-blue) !important; }
+        .button.is-link { background-color: var(--untref-blue) !important; }
+        .rocket-box { background: #1a1a1a; color: #00ff41; padding: 20px; border-radius: 8px; font-family: 'Courier New', monospace; border: 1px solid #333; min-height: 100px; }
+        .footer-logos { border-top: 1px solid #ddd; padding: 30px 0; background: #fff; margin-top: 50px; }
+        .footer-logos img { height: 55px; filter: grayscale(100%); transition: 0.3s; margin: 10px 25px; }
+        .footer-logos img:hover { filter: grayscale(0%); }
+        .box { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body class="has-background-light">
-    <nav class="navbar is-black">
+    <nav class="navbar is-info">
         <div class="container">
             <div class="navbar-brand">
                 <a class="navbar-item" href="/"><b>INSCRIPCIÓN</b></a>
@@ -60,6 +66,7 @@ HTML_TEMPLATE = '''
             </div>
         </div>
     </nav>
+    
     <section class="section">
         <div class="container" style="max-width: 700px;">
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -71,30 +78,42 @@ HTML_TEMPLATE = '''
         </div>
     </section>
 
+    <footer class="footer-logos has-text-centered">
+        <div class="container">
+            <div class="columns is-mobile is-centered is-vcentered">
+                <div class="column is-narrow">
+                    <img src="{{ url_for('static', filename='python-untref.jpg') }}" alt="Python UNTREF">
+                </div>
+                <div class="column is-narrow">
+                    <img src="{{ url_for('static', filename='equipo-investigacion.jpg') }}" alt="Investigación">
+                </div>
+                <div class="column is-narrow">
+                    <img src="{{ url_for('static', filename='innovar-logo.jpg') }}" alt="Innovar">
+                </div>
+            </div>
+            <p class="is-size-7 has-text-grey mt-2">© 2026 Universidad Nacional de Tres de Febrero</p>
+        </div>
+    </footer>
+
     <script>
-        function typeWriter(elementId, speed) {
+        function typeWriter(elementId, text, speed) {
             const element = document.getElementById(elementId);
             if (!element) return;
-            const text = element.innerHTML;
             element.innerHTML = "";
-            element.style.display = "block";
             let i = 0;
             function type() {
                 if (i < text.length) {
-                    if (text.charAt(i) === "<") {
-                        let endTag = text.indexOf(">", i);
-                        element.innerHTML += text.substring(i, endTag + 1);
-                        i = endTag + 1;
-                    } else {
-                        element.innerHTML += text.charAt(i);
-                        i++;
-                    }
+                    element.innerHTML += text.charAt(i);
+                    i++;
                     setTimeout(type, speed);
                 }
             }
             type();
         }
-        window.onload = () => { if(document.getElementById('ai-text')) typeWriter('ai-text', 10); };
+        window.onload = () => {
+            const pData = document.getElementById('raw-prompt');
+            if (pData) typeWriter('type-target', pData.value, 15);
+        };
     </script>
 </body>
 </html>
@@ -104,104 +123,113 @@ HTML_TEMPLATE = '''
 def registro():
     if request.method == 'POST':
         payload = {
-            "accion": "registrar",
-            "nombre": request.form.get('nombre'),
-            "dni": request.form.get('dni'),
-            "materia": request.form.get('materia'),
+            "accion": "registrar", "nombre": request.form.get('nombre'),
+            "dni": request.form.get('dni'), "materia": request.form.get('materia'),
             "fecha": request.form.get('fecha')
         }
         try:
             r = requests.post(URL_API, json=payload, timeout=15).json()
             if r['status'] == 'success':
-                flash("✅ <b>Registro Exitoso</b>", "is-success")
+                flash("✅ <b>Registro Exitoso.</b> Verifique su estado para descargar el comprobante.", "is-success")
             else:
-                flash(f"🚫 {r.get('data', 'Error')}", "is-danger")
+                flash(f"🚫 <b>Error:</b> {r.get('data', 'Error')}", "is-danger")
         except:
-            flash("❌ Error de conexión", "is-danger")
+            flash("❌ No se pudo conectar con la base de datos.", "is-danger")
         return redirect(url_for('registro'))
     
     form_html = '''
-    <h1 class="title">Inscripción Académica</h1>
+    <h1 class="title has-text-centered">Inscripción Académica</h1>
     <div class="box">
         <form method="POST">
-            <div class="field"><label class="label">Nombre</label><input class="input" name="nombre" required></div>
+            <div class="field"><label class="label">Nombre y Apellido</label><input class="input" name="nombre" required></div>
             <div class="field"><label class="label">DNI</label><input class="input" name="dni" type="number" required></div>
-            <div class="field"><label class="label">Materia</label>
-                <div class="select is-fullwidth"><select name="materia">
-                    <option>Informática I</option><option selected>Informática II</option><option>Informática III</option>
-                </select></div>
-            </div>
+            <div class="field"><label class="label">Materia</label><div class="select is-fullwidth"><select name="materia"><option>Informática I</option><option selected>Informática II</option><option>Informática III</option></select></div></div>
             <div class="field"><label class="label">Fecha</label><input class="input" name="fecha" type="date" required></div>
-            <button class="button is-link is-fullwidth">Inscribirse</button>
+            <button class="button is-link is-fullwidth mt-4">Confirmar Inscripción</button>
         </form>
     </div>'''
     return render_template_string(HTML_TEMPLATE, contenido_principal=form_html)
 
 @app.route('/estado', methods=['GET', 'POST'])
 def estado():
+    res_html = ""
     if request.method == 'POST':
         payload = {"accion": "consultar", "dni": request.form.get('dni')}
         try:
             r = requests.post(URL_API, json=payload).json()
             if r['status'] == 'exists':
                 d = r['data']
-                prog = ""
-                if "II" in d['materia']:
-                    prog = '<div class="mt-3 is-size-7"><b>Programa:</b> Excel Avanzado, Word Académico y Python.</div>'
-                
-                msg = f'''
-                <div id="ai-text" style="display:none;">
-                    Verificado Estudiante <b>{d['nombre']}</b> para <b>{d['materia']}</b>.<br><br>
+                res_html = f'''
+                <div class="notification is-info is-light">
+                    <p class="title is-5">✅ Alumno Verificado: {d['nombre']}</p>
+                    <p>Inscripto en la materia: <b>{d['materia']}</b></p><br>
                     <a href="/descargar_pdf?nombre={d['nombre']}&dni={d['dni']}&materia={d['materia']}&uuid={d['uuid']}" 
-                       class="button is-black is-fullwidth">Descargar PDF</a>
-                    {prog}
+                       class="button is-dark is-fullwidth">
+                       <i class="fas fa-file-pdf mr-2"></i> DESCARGAR COMPROBANTE PDF
+                    </a>
                 </div>'''
-                flash(msg, "is-info")
             else:
-                flash("No se encontró el DNI.", "is-danger")
+                flash("No se encontró ningún registro con ese DNI.", "is-danger")
         except:
-            flash("Error de conexión.", "is-danger")
-        return redirect(url_for('estado'))
+            flash("Error al conectar con el servidor.", "is-danger")
+        return redirect(url_for('estado')) if not res_html else None
 
-    form_html = '''
-    <h1 class="title">Consulta de Estado</h1>
+    form_html = f'''
+    <h1 class="title has-text-centered">Consultar Estado</h1>
     <div class="box">
         <form method="POST">
-            <label class="label">DNI</label>
+            <label class="label">DNI del Estudiante</label>
             <div class="field has-addons">
                 <div class="control is-expanded"><input class="input" name="dni" required></div>
                 <div class="control"><button class="button is-primary">Buscar</button></div>
             </div>
         </form>
+        <div class="mt-5">{res_html}</div>
     </div>'''
     return render_template_string(HTML_TEMPLATE, contenido_principal=form_html)
 
 @app.route('/rocket', methods=['GET', 'POST'])
 def rocket():
-    hub_ia = ""
+    output_html = ""
     if request.method == 'POST':
         tema = request.form.get('tema')
         detalles = TEMAS_ROCKET.get(tema)
-        prompt = f"[ROLE]: Tutor Innovar UNTREF. [OBJECTIVE]: Tutorial sobre {tema}. [ANTI-HALLUCINATION]: Usa https://innovaruntref.com.ar"
+        # El Prompt con Método ROCKET corregido
+        prompt_raw = f"[ROLE]: Tutor Innovar UNTREF experto en {tema}.\\n[OBJECTIVE]: Explicar conceptos técnicos y prácticos.\\n[CONTEXT]: Estudiante de Informática UNTREF trabajando en Innovar.\\n[KNOWLEDGE]: {detalles}.\\n[ANTI-HALLUCINATION]: Consulta obligatoria: https://innovaruntref.com.ar.\\n[EXECUTION]: Tutorial paso a paso + ejercicio.\\n[TONE]: Pedagógico y profesional."
         
-        hub_ia = f'''
+        output_html = f'''
         <div class="mt-5">
-            <div class="rocket-box"><p id="pText">{prompt}</p></div>
-            <button class="button is-success is-fullwidth mt-3" onclick="navigator.clipboard.writeText(document.getElementById('pText').innerText); alert('Copiado');">Copiar Prompt</button>
+            <input type="hidden" id="raw-prompt" value="{prompt_raw}">
+            <div class="rocket-box" id="type-target"></div>
+            <button class="button is-success is-fullwidth mt-3" onclick="navigator.clipboard.writeText(document.getElementById('raw-prompt').value.replace(/\\\\n/g, '\\n')); alert('Prompt copiado');">
+                <i class="fas fa-copy mr-2"></i> Copiar Prompt
+            </button>
             <div class="buttons is-centered mt-4">
-                <a href="https://chatgpt.com" target="_blank" class="button is-dark">ChatGPT</a>
-                <a href="https://gemini.google.com" target="_blank" class="button is-info">Gemini</a>
+                <a href="https://chatgpt.com" target="_blank" class="button is-dark"><i class="fas fa-bolt mr-2"></i> ChatGPT</a>
+                <a href="https://gemini.google.com" target="_blank" class="button is-info"><i class="fas fa-stars mr-2"></i> Gemini</a>
                 <a href="https://innovaruntref.com.ar" target="_blank" class="button is-danger is-outlined">Portal Innovar</a>
             </div>
         </div>'''
 
     opciones = "".join([f'<option value="{t}">{t}</option>' for t in TEMAS_ROCKET.keys()])
-    contenido = f'''<h1 class="title">ROCKET HUB</h1><div class="box"><form method="POST"><div class="field"><label class="label">Tema</label><div class="select is-fullwidth"><select name="tema">{opciones}</select></div></div><button class="button is-link is-fullwidth">Generar</button></form></div>{hub_ia}'''
-    return render_template_string(HTML_TEMPLATE, contenido_principal=contenido)
+    form_html = f'''
+    <h1 class="title has-text-centered">Rocket Hub</h1>
+    <div class="box">
+        <form method="POST">
+            <div class="field">
+                <label class="label">Selecciona el tema a reforzar:</label>
+                <div class="select is-fullwidth"><select name="tema">{opciones}</select></div>
+            </div>
+            <button class="button is-link is-fullwidth">Generar Prompt Maestro</button>
+        </form>
+        {output_html}
+    </div>'''
+    return render_template_string(HTML_TEMPLATE, contenido_principal=form_html)
 
 @app.route('/descargar_pdf')
 def descargar_pdf():
     pdf_bytes = generar_comprobante(request.args)
-    return Response(pdf_bytes, mimetype="application/pdf", headers={"Content-disposition": "attachment; filename=comprobante.pdf"})
+    return Response(pdf_bytes, mimetype="application/pdf", headers={"Content-disposition": "attachment; filename=comprobante_untref.pdf"})
 
-application = app
+if __name__ == "__main__":
+    app.run(debug=True)
