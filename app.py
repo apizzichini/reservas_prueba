@@ -33,6 +33,7 @@ TEMAS_ROCKET = {
     "Word Académico": "Normas APA y gestión de documentos extensos."
 }
 
+# --- TEMPLATE CORREGIDO (Incluye el marcador de contenido) ---
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="es">
@@ -61,9 +62,32 @@ HTML_TEMPLATE = '''
         }
         .footer-logos img:hover { filter: grayscale(0%); }
         .box { border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .rocket-box { background: #1a1a1a; color: #00ff41; padding: 20px; border-radius: 8px; font-family: monospace; min-height: 100px; }
     </style>
 </head>
 <body class="has-background-light">
+    <nav class="navbar is-info">
+        <div class="container">
+            <div class="navbar-brand">
+                <a class="navbar-item" href="/"><b>REGISTRO</b></a>
+                <a class="navbar-item" href="/estado"><b>MI ESTADO</b></a>
+                <a class="navbar-item" href="/rocket"><b>ROCKET HUB</b></a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="section">
+        <div class="container" style="max-width: 700px;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}{% for c, m in messages %}
+                <div class="notification {{c}} is-light">{{m|safe}}</div>
+              {% endfor %}{% endif %}
+            {% endwith %}
+            
+            {{ contenido_principal | safe }}
+        </div>
+    </section>
+
     <footer class="footer-logos has-text-centered">
         <div class="container">
             <div class="columns is-centered is-vcentered is-mobile is-multiline">
@@ -71,7 +95,7 @@ HTML_TEMPLATE = '''
                     <img src="{{ url_for('static', filename='Python.jpg') }}" alt="Python UNTREF">
                 </div>
                 <div class="column is-narrow">
-                    <img src="{{ url_for('static', filename='Equipo De Investigación Tecnología Educativa.jpg') }}" alt="Equipo Investigación">
+                    <img src="{{ url_for('static', filename='Equipo De Investigación Tecnología Educativa.jpg') }}" alt="Investigación">
                 </div>
                 <div class="column is-narrow">
                     <img src="{{ url_for('static', filename='INNOVAR LOGO WEB (1).jpg') }}" alt="Innovar Logo">
@@ -80,8 +104,22 @@ HTML_TEMPLATE = '''
             <p class="is-size-7 has-text-grey mt-4">Universidad Nacional de Tres de Febrero</p>
         </div>
     </footer>
-
-    </body>
+    
+    <script>
+        function typeWriter(id, text, speed) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.innerHTML = "";
+            let i = 0;
+            function type() { if (i < text.length) { el.innerHTML += text.charAt(i); i++; setTimeout(type, speed); } }
+            type();
+        }
+        window.onload = () => {
+            const pData = document.getElementById('raw-prompt');
+            if (pData) typeWriter('type-target', pData.value, 15);
+        };
+    </script>
+</body>
 </html>
 '''
 
@@ -127,11 +165,9 @@ def estado():
         except:
             flash("❌ Error conectando con el servidor de datos.", "is-danger")
         
-        # EL CAMBIO CLAVE: Si es POST pero no hay resultado, volvemos a mostrar la página limpia.
         if not res_html:
             return redirect(url_for('estado'))
 
-    # Esta parte se ejecuta siempre en GET y también en POST cuando res_html tiene contenido
     contenido = f'''<h1 class="title">Mi Estado</h1><div class="box">
         <form method="POST">
             <div class="field has-addons">
