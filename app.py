@@ -3,9 +3,9 @@ import requests
 from flask import Flask, render_template_string, request, Response, redirect, url_for, flash
 from fpdf import FPDF
 
-# 1. DECLARACIÓN DE LA APP (Vercel busca esto)
+# Vercel busca este objeto llamado 'app'
 app = Flask(__name__)
-app.secret_key = "innovar_untref_2026_final_v6"
+app.secret_key = "innovar_untref_2026_final_v7"
 URL_API = os.getenv("APPS_SCRIPT_URL")
 
 # --- LÓGICA DE PDF ---
@@ -49,7 +49,6 @@ HTML_TEMPLATE = '''
         .footer-logos img { height: 60px; max-width: 200px; filter: grayscale(100%); transition: 0.3s; margin: 10px 25px; display: inline-block; vertical-align: middle; }
         .footer-logos img:hover { filter: grayscale(0%); }
         .box { border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .rocket-box { background: #1a1a1a; color: #00ff41; padding: 20px; border-radius: 8px; font-family: monospace; min-height: 100px; }
     </style>
 </head>
 <body class="has-background-light">
@@ -74,4 +73,27 @@ HTML_TEMPLATE = '''
         <div class="container">
             <div class="columns is-centered is-vcentered is-mobile is-multiline">
                 <div class="column is-narrow"><img src="{{ url_for('static', filename='python-untref.jpg') }}" alt="Python"></div>
-                <div
+                <div class="column is-narrow"><img src="{{ url_for('static', filename='equipo-investigacion.jpg') }}" alt="Equipo"></div>
+                <div class="column is-narrow"><img src="{{ url_for('static', filename='innovar-logo.jpg') }}" alt="Innovar"></div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
+'''
+
+@app.route('/', methods=['GET', 'POST'])
+def registro():
+    if request.method == 'POST':
+        payload = {"accion": "registrar", "nombre": request.form.get('nombre'), "dni": request.form.get('dni'), "materia": request.form.get('materia'), "fecha": request.form.get('fecha')}
+        try:
+            requests.post(URL_API, json=payload, timeout=10)
+            flash("✅ Registro enviado correctamente.", "is-success")
+        except:
+            flash("❌ Error al registrar.", "is-danger")
+        return redirect(url_for('registro'))
+    
+    contenido = '''<h1 class="title">Inscripción</h1><div class="box"><form method="POST">
+        <div class="field"><label class="label">Nombre</label><input class="input" name="nombre" required></div>
+        <div class="field"><label class="label">DNI</label><input class="input" name="dni" type="number" required></div>
+        <div class="field"><label class="label">Materia</label
