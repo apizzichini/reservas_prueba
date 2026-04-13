@@ -3,12 +3,12 @@ import requests
 from flask import Flask, render_template_string, request, Response, redirect, url_for, flash
 from fpdf import FPDF
 
-# Vercel busca este objeto llamado 'app'
+# Instancia de la app para Flask y Vercel
 app = Flask(__name__)
-app.secret_key = "innovar_untref_2026_final_v7"
+app.secret_key = "innovar_untref_2026_final_v9"
 URL_API = os.getenv("APPS_SCRIPT_URL")
 
-# --- LÓGICA DE PDF ---
+# --- CONFIGURACIÓN DE PDF ---
 class PDF(FPDF):
     def header(self):
         self.set_font('Arial', 'B', 15)
@@ -34,6 +34,7 @@ TEMAS_ROCKET = {
     "Word Académico": "Normas APA y gestión de documentos extensos."
 }
 
+# --- TEMPLATE HTML ---
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="es">
@@ -49,6 +50,7 @@ HTML_TEMPLATE = '''
         .footer-logos img { height: 60px; max-width: 200px; filter: grayscale(100%); transition: 0.3s; margin: 10px 25px; display: inline-block; vertical-align: middle; }
         .footer-logos img:hover { filter: grayscale(0%); }
         .box { border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .rocket-box { background: #1a1a1a; color: #00ff41; padding: 20px; border-radius: 8px; font-family: monospace; }
     </style>
 </head>
 <body class="has-background-light">
@@ -82,18 +84,80 @@ HTML_TEMPLATE = '''
 </html>
 '''
 
+# --- RUTAS ---
 @app.route('/', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
-        payload = {"accion": "registrar", "nombre": request.form.get('nombre'), "dni": request.form.get('dni'), "materia": request.form.get('materia'), "fecha": request.form.get('fecha')}
+        payload = {
+            "accion": "registrar", 
+            "nombre": request.form.get('nombre'), 
+            "dni": request.form.get('dni'), 
+            "materia": request.form.get('materia'), 
+            "fecha": request.form.get('fecha')
+        }
         try:
-            requests.post(URL_API, json=payload, timeout=10)
-            flash("✅ Registro enviado correctamente.", "is-success")
+            r = requests.post(URL_API, json=payload, timeout=10).json()
+            if r.get('status') == 'success':
+                flash("✅ <b>Registro enviado correctamente.</b> Verifique su estado en unos minutos.", "is-success")
+            elif r.get('status') == 'full':
+                flash("⚠️ <b>El cupo para esta materia está lleno.</b> Por favor, verifique otros turnos disponibles.", "is-warning")
+            else:
+                flash("❌ No se pudo completar el registro.", "is-danger")
         except:
-            flash("❌ Error al registrar.", "is-danger")
+            flash("❌ Error de comunicación con el servidor.", "is-danger")
         return redirect(url_for('registro'))
     
     contenido = '''<h1 class="title">Inscripción</h1><div class="box"><form method="POST">
-        <div class="field"><label class="label">Nombre</label><input class="input" name="nombre" required></div>
+        <div class="field"><label class="label">Nombre y Apellido</label><input class="input" name="nombre" required></div>
         <div class="field"><label class="label">DNI</label><input class="input" name="dni" type="number" required></div>
-        <div class="field"><label class="label">Materia</label
+        <div class="field"><label class="label">Materia</label><div class="select is-fullwidth">
+        <select name="materia">
+            <option>Informática I</option>
+            <option>Informática II</option>
+            <option>Informática III</option>
+        </select></div></div>
+        <div class="field"><label class="label">Fecha</label><input class="input" name="fecha" type="date" required></div>
+        <button class="button is-link is-fullwidth">Enviar Inscripción</button></form></div>'''
+    return render_template_string(HTML_TEMPLATE, contenido_principal=contenido)
+
+@app.route('/estado', methods=['GET', 'POST'])
+def estado():
+    res_html = ""
+    if request.method == 'POST':
+        dni_query = request.form.get('dni')
+        try:
+            r = requests.post(URL_API, json={"accion": "consultar", "dni": dni_query}, timeout=15).json()
+            if r.get('status') == 'exists':
+                d = r['data']
+                res_html = f'''<div class="notification is-info is-light">
+                    <p><b>Alumno:</b> {d.get('nombre')}</p><p><b>Materia:</b> {d.get('materia')}</p><br>
+                    <a href="/descargar_pdf?nombre={d.get('nombre')}&dni={d.get('dni')}&materia={d.get('materia')}&uuid={d.get('uuid')}" class="button is-dark is-fullwidth">DESCARGAR PDF</a></div>'''
+            else:
+                flash(f"⚠️ El DNI {dni_query} no se encuentra registrado.", "is-warning")
+        except:
+            flash("❌ Error al consultar los datos.", "is-danger")
+        if not res_html: return redirect(url_for('estado'))
+
+    contenido = f'''<h1 class="title">Mi Estado</h1><div class="box"><form method="POST">
+        <div class="field has-addons"><div class="control is-expanded"><input class="input" name="dni" placeholder="Tu DNI" required></div>
+        <div class="control"><button class="button is-primary">Buscar</button></div></div></form><div class="mt-4">{res_html}</div></div>'''
+    return render_template_string(HTML_TEMPLATE, contenido_principal=contenido)
+
+@app.route('/rocket', methods=['GET', 'POST'])
+def rocket():
+    output = ""
+    if request.method == 'POST':
+        tema = request.form.get('tema')
+        detalles = TEMAS_ROCKET.get(tema)
+        p = f"[ROLE]: Tutor Innovar UNTREF experto en {tema}.\\n[KNOWLEDGE]: {detalles}."
+        output = f'''<div class="mt-4"><div class="rocket-box p-4">{p}</div></div>'''
+    opc = "".join([f'<option value="{t}">{t}</option>' for t in TEMAS_ROCKET.keys()])
+    contenido = f'''<h1 class="title">Rocket Hub</h1><div class="box"><form method="POST">
+        <div class="select is-fullwidth"><select name="tema">{opc}</select></div>
+        <button class="button is-link mt-2 is-fullwidth">Generar Prompt</button></form>{output}</div>'''
+    return render_template_string(HTML_TEMPLATE, contenido_principal=contenido)
+
+@app.route('/descargar_pdf')
+def descargar_pdf():
+    pdf_bytes = generar_comprobante(request.args)
+    return Response(pdf_bytes, mimetype="application/pdf", headers={"Content-disposition": "attachment; filename=comprobante.pdf"})
