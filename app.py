@@ -44,51 +44,44 @@ HTML_TEMPLATE = '''
     <style>
         :root { --untref-blue: #1d438a; }
         .navbar { background-color: var(--untref-blue) !important; }
-        .button.is-link { background-color: var(--untref-blue) !important; }
-        .rocket-box { background: #1a1a1a; color: #00ff41; padding: 20px; border-radius: 8px; font-family: monospace; border: 1px solid #333; min-height: 100px; }
-        .footer-logos { border-top: 1px solid #eee; padding: 40px 0; background: #fff; margin-top: 50px; }
-        .footer-logos img { height: 60px; filter: grayscale(100%); transition: 0.3s; margin: 0 20px; }
+        .footer-logos { 
+            border-top: 1px solid #eee; 
+            padding: 40px 0; 
+            background: #ffffff; 
+            margin-top: 50px; 
+        }
+        .footer-logos img { 
+            height: 60px; 
+            max-width: 200px;
+            filter: grayscale(100%); 
+            transition: 0.3s; 
+            margin: 10px 25px; 
+            display: inline-block;
+            vertical-align: middle;
+        }
         .footer-logos img:hover { filter: grayscale(0%); }
         .box { border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body class="has-background-light">
-    <nav class="navbar is-info">
-        <div class="container"><div class="navbar-brand">
-            <a class="navbar-item" href="/"><b>REGISTRO</b></a>
-            <a class="navbar-item" href="/estado"><b>MI ESTADO</b></a>
-            <a class="navbar-item" href="/rocket"><b>ROCKET HUB</b></a>
-        </div></div>
-    </nav>
-    <section class="section"><div class="container" style="max-width: 700px;">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}{% for c, m in messages %}<div class="notification {{c}} is-light">{{m|safe}}</div>{% endfor %}{% endif %}
-        {% endwith %}
-        {{ contenido_principal | safe }}
-    </div></section>
     <footer class="footer-logos has-text-centered">
         <div class="container">
-            <img src="{{ url_for('static', filename='Python.jpg') }}" alt="Python">
-            <img src="{{ url_for('static', filename='Equipo De Investigación Tecnología Educativa.jpg') }}" alt="Equipo">
-            <img src="{{ url_for('static', filename='INNOVAR LOGO WEB (1).jpg') }}" alt="Innovar">
+            <div class="columns is-centered is-vcentered is-mobile is-multiline">
+                <div class="column is-narrow">
+                    <img src="{{ url_for('static', filename='Python.jpg') }}" alt="Python UNTREF">
+                </div>
+                <div class="column is-narrow">
+                    <img src="{{ url_for('static', filename='Equipo De Investigación Tecnología Educativa.jpg') }}" alt="Equipo Investigación">
+                </div>
+                <div class="column is-narrow">
+                    <img src="{{ url_for('static', filename='INNOVAR LOGO WEB (1).jpg') }}" alt="Innovar Logo">
+                </div>
+            </div>
             <p class="is-size-7 has-text-grey mt-4">Universidad Nacional de Tres de Febrero</p>
         </div>
     </footer>
-    <script>
-        function typeWriter(id, text, speed) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.innerHTML = "";
-            let i = 0;
-            function type() { if (i < text.length) { el.innerHTML += text.charAt(i); i++; setTimeout(type, speed); } }
-            type();
-        }
-        window.onload = () => {
-            const pData = document.getElementById('raw-prompt');
-            if (pData) typeWriter('type-target', pData.value, 15);
-        };
-    </script>
-</body>
+
+    </body>
 </html>
 '''
 
