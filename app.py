@@ -4,7 +4,7 @@ import requests
 from fpdf import FPDF
 
 app = Flask(__name__)
-app.secret_key = "innovar_untref_final_fix_v3"
+app.secret_key = "innovar_untref_final_fix_v4"
 URL_API = os.getenv("APPS_SCRIPT_URL")
 
 # --- LÓGICA DE PDF ---
@@ -33,7 +33,6 @@ TEMAS_ROCKET = {
     "Word Académico": "Normas APA y gestión de documentos extensos."
 }
 
-# --- TEMPLATE CORREGIDO (Incluye el marcador de contenido) ---
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="es">
@@ -92,13 +91,13 @@ HTML_TEMPLATE = '''
         <div class="container">
             <div class="columns is-centered is-vcentered is-mobile is-multiline">
                 <div class="column is-narrow">
-                    <img src="{{ url_for('static', filename='Python.jpg') }}" alt="Python UNTREF">
+                    <img src="{{ url_for('static', filename='python-untref.jpg') }}" alt="Python UNTREF">
                 </div>
                 <div class="column is-narrow">
-                    <img src="{{ url_for('static', filename='Equipo De Investigación Tecnología Educativa.jpg') }}" alt="Investigación">
+                    <img src="{{ url_for('static', filename='equipo-investigacion.jpg') }}" alt="Investigación">
                 </div>
                 <div class="column is-narrow">
-                    <img src="{{ url_for('static', filename='INNOVAR LOGO WEB (1).jpg') }}" alt="Innovar Logo">
+                    <img src="{{ url_for('static', filename='innovar-logo.jpg') }}" alt="Innovar Logo">
                 </div>
             </div>
             <p class="is-size-7 has-text-grey mt-4">Universidad Nacional de Tres de Febrero</p>
@@ -141,7 +140,15 @@ def registro():
     contenido = '''<h1 class="title">Inscripción</h1><div class="box"><form method="POST">
         <div class="field"><label class="label">Nombre</label><input class="input" name="nombre" required></div>
         <div class="field"><label class="label">DNI</label><input class="input" name="dni" type="number" required></div>
-        <div class="field"><label class="label">Materia</label><div class="select is-fullwidth"><select name="materia"><option>Informática II</option><option>Informática III</option></select></div></div>
+        <div class="field"><label class="label">Materia</label>
+            <div class="select is-fullwidth">
+                <select name="materia">
+                    <option>Informática I</option>
+                    <option>Informática II</option>
+                    <option>Informática III</option>
+                </select>
+            </div>
+        </div>
         <div class="field"><label class="label">Fecha</label><input class="input" name="fecha" type="date" required></div>
         <button class="button is-link is-fullwidth">Enviar</button></form></div>'''
     return render_template_string(HTML_TEMPLATE, contenido_principal=contenido)
@@ -161,7 +168,7 @@ def estado():
                     <a href="/descargar_pdf?nombre={d.get('nombre')}&dni={d.get('dni')}&materia={d.get('materia')}&uuid={d.get('uuid')}" 
                     class="button is-dark is-fullwidth">DESCARGAR PDF</a></div>'''
             else:
-                flash(f"⚠️ El DNI {dni_query} no está en la base de datos.", "is-warning")
+                flash(f"⚠️ El DNI {dni_query} no está registrado.", "is-warning")
         except:
             flash("❌ Error conectando con el servidor de datos.", "is-danger")
         
